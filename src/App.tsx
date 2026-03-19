@@ -289,7 +289,11 @@ function App() {
         }
       }
 
-      const fileName = `${currentTemplateName || '문서'}.jpg`;
+      const patientNameField = fields.find(f => f.label.includes('성명') || f.label.includes('환자명'));
+      const patientName = patientNameField?.value || '';
+      const fileName = patientName 
+        ? `${currentTemplateName || '문서'}_${patientName}.jpg`
+        : `${currentTemplateName || '문서'}.jpg`;
       
       if ('showSaveFilePicker' in window) {
         try {
