@@ -68,6 +68,7 @@ interface AppState {
   deleteTemplate: (id: string) => Promise<void>;
   renameTemplate: (id: string, newName: string) => Promise<void>;
   duplicateField: (id: string) => void;
+  exportTemplates: () => Promise<void>;
   isGroupMoveEnabled: boolean;
   setIsGroupMoveEnabled: (enabled: boolean) => void;
 }
@@ -156,7 +157,26 @@ export const useAppStore = create<AppState>((set, get) => ({
   savedTemplates: [],
   
   loadSavedTemplatesList: async () => {
-    const templates = await templateStorage.getAllTemplates();
+    let templates = await templateStorage.getAllTemplates();
+    
+    // 로컬 DB가 비어있으면 초기 템플릿 불러오기 (Vercel 배포 등 신규 사용자용)
+    if (templates.length === 0) {
+      try {
+        const response = await fetch('/lila_im_templates.json');
+        if (response.ok) {
+          const initialTemplates = await response.json();
+          // 가져온 템플릿들을 로컬 DB에 저장
+          for (const tpl of initialTemplates) {
+             await templateStorage.saveTemplate(tpl, tpl.id);
+          }
+          // 다시 불러오기
+          templates = await templateStorage.getAllTemplates();
+        }
+      } catch (e) {
+        console.error('기본 템플릿 로딩 실패:', e);
+      }
+    }
+    
     set({ savedTemplates: templates });
   },
 
@@ -264,7 +284,25 @@ export const useAppStore = create<AppState>((set, get) => ({
       selectedTool: 'select'
     }));
   },
-
+  
+  exportTemplates: async () => {
+    try {
+      const { templateStorage } = await import('../utils/storage');
+      const templates = await templateStorage.getAllTemplates();
+      const dataStr = JSON.stringify(templates, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = 'dentist_templates.json';
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      alert('템플릿이 성공적으로 추출되었습니다. 다운로드된 파일을 확인해 주세요!');
+    } catch (e) {
+      console.error(e);
+      alert('템플릿 추출 중 오류가 발생했습니다.');
+    }
+  },
   isGroupMoveEnabled: true,
   setIsGroupMoveEnabled: (enabled: boolean) => set({ isGroupMoveEnabled: enabled }),
 }));

@@ -506,6 +506,15 @@ function App() {
               )}
             </div>
           </div>
+          <div className="p-3 border-t border-slate-100 mt-auto">
+            <button onClick={() => {
+              const { exportTemplates } = useAppStore.getState();
+              exportTemplates();
+            }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors">
+              <Download className="w-4 h-4" /> 모든 템플릿 내보내기 (JSON)
+            </button>
+          </div>
         </aside>
       )}
 
