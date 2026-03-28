@@ -228,17 +228,22 @@ function App() {
           // Year
           if (parts[0]) {
             const yCenterX = field.x + field.width * (field.yearWidth! / 200);
-            ctx.fillText(parts[0], yCenterX, field.y + field.height / 2, field.width * (field.yearWidth! / 100) - 4);
+            const text = field.showDateLabel ? `${parts[0]}년` : parts[0];
+            ctx.fillText(text, yCenterX, field.y + field.height / 2, field.width * (field.yearWidth! / 100) - 4);
           }
           // Month
           if (parts[1]) {
             const mCenterX = field.x + field.width * (field.yearWidth! / 100) + field.width * (field.monthWidth! / 200);
-            ctx.fillText(parts[1].padStart(2, '0'), mCenterX, field.y + field.height / 2, field.width * (field.monthWidth! / 100) - 4);
+            const monthStr = parts[1].padStart(2, '0');
+            const text = field.showDateLabel ? `${monthStr}월` : monthStr;
+            ctx.fillText(text, mCenterX, field.y + field.height / 2, field.width * (field.monthWidth! / 100) - 4);
           }
           // Day
           if (parts[2]) {
             const dCenterX = field.x + field.width * ((field.yearWidth! + field.monthWidth!) / 100) + field.width * (field.dayWidth! / 200);
-            ctx.fillText(parts[2].padStart(2, '0'), dCenterX, field.y + field.height / 2, field.width * (field.dayWidth! / 100) - 4);
+            const dayStr = parts[2].padStart(2, '0');
+            const text = field.showDateLabel ? `${dayStr}일` : dayStr;
+            ctx.fillText(text, dCenterX, field.y + field.height / 2, field.width * (field.dayWidth! / 100) - 4);
           }
           ctx.restore();
           continue;
@@ -724,11 +729,11 @@ function App() {
                         </Group>
                       ) : field.type === 'date' ? (
                         <Group>
-                          <Text text="년" x={0} y={0} width={field.width * (field.yearWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" />
+                          <Text text={field.showDateLabel ? "0000년" : "년"} x={0} y={0} width={field.width * (field.yearWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" opacity={field.showDateLabel ? 0.4 : 1} />
                           <Rect x={field.width * (field.yearWidth! / 100)} y={field.height * 0.2} width={1} height={field.height * 0.6} fill={c.main} opacity={0.3} />
-                          <Text text="월" x={field.width * (field.yearWidth! / 100)} y={0} width={field.width * (field.monthWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" />
+                          <Text text={field.showDateLabel ? "00월" : "월"} x={field.width * (field.yearWidth! / 100)} y={0} width={field.width * (field.monthWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" opacity={field.showDateLabel ? 0.4 : 1} />
                           <Rect x={field.width * ((field.yearWidth! + field.monthWidth!) / 100)} y={field.height * 0.2} width={1} height={field.height * 0.6} fill={c.main} opacity={0.3} />
-                          <Text text="일" x={field.width * ((field.yearWidth! + field.monthWidth!) / 100)} y={0} width={field.width * (field.dayWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" />
+                          <Text text={field.showDateLabel ? "00일" : "일"} x={field.width * ((field.yearWidth! + field.monthWidth!) / 100)} y={0} width={field.width * (field.dayWidth! / 100)} height={field.height} align="center" verticalAlign="middle" fill={isSelected ? c.sel : c.main} fontSize={Math.max(10, Math.floor(field.height * 0.3))} fontStyle="600" opacity={field.showDateLabel ? 0.4 : 1} />
                         </Group>
                       ) : (
                         <Text text={field.label} width={field.width} height={field.height} padding={6} align="center" verticalAlign="middle"
@@ -814,18 +819,27 @@ function App() {
                     )}
                     {field.type === 'date' && (
                       <div style={{ display: 'flex', width: '100%', height: '100%', gap: 1 }}>
-                        <input type="text" value={field.value?.split('-')[0] || ''} 
-                          onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${e.target.value}-${parts[1]}-${parts[2]}`); }}
-                          onFocus={() => setSelectedFieldId(field.id)}
-                          placeholder="년" style={{ width: `${field.yearWidth}%`, height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderRadius: '2px 0 0 2px', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
-                        <input type="text" value={field.value?.split('-')[1] || ''} 
-                          onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${parts[0]}-${e.target.value}-${parts[2]}`); }}
-                          onFocus={() => setSelectedFieldId(field.id)}
-                          placeholder="월" style={{ width: `${field.monthWidth}%`, height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderLeft: 'none', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
-                        <input type="text" value={field.value?.split('-')[2] || ''} 
-                          onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${parts[0]}-${parts[1]}-${e.target.value}`); }}
-                          onFocus={() => setSelectedFieldId(field.id)}
-                          placeholder="일" style={{ width: `${field.dayWidth}%`, height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderLeft: 'none', borderRadius: '0 2px 2px 0', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
+                        <div style={{ width: `${field.yearWidth}%`, height: '100%', position: 'relative' }}>
+                          <input type="text" value={field.value?.split('-')[0] || ''} 
+                            onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${e.target.value}-${parts[1]}-${parts[2]}`); }}
+                            onFocus={() => setSelectedFieldId(field.id)}
+                            placeholder="년" style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderRadius: '2px 0 0 2px', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
+                          {field.showDateLabel && (field.value?.split('-')[0]) && <span style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', fontSize: (field.fontSize || Math.max(10, Math.floor(field.height * 0.33))) * 0.8, color: '#666', pointerEvents: 'none' }}>년</span>}
+                        </div>
+                        <div style={{ width: `${field.monthWidth}%`, height: '100%', position: 'relative' }}>
+                          <input type="text" value={field.value?.split('-')[1] || ''} 
+                            onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${parts[0]}-${e.target.value}-${parts[2]}`); }}
+                            onFocus={() => setSelectedFieldId(field.id)}
+                            placeholder="월" style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderLeft: 'none', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
+                          {field.showDateLabel && (field.value?.split('-')[1]) && <span style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', fontSize: (field.fontSize || Math.max(10, Math.floor(field.height * 0.33))) * 0.8, color: '#666', pointerEvents: 'none' }}>월</span>}
+                        </div>
+                        <div style={{ width: `${field.dayWidth}%`, height: '100%', position: 'relative' }}>
+                          <input type="text" value={field.value?.split('-')[2] || ''} 
+                            onChange={e => { const parts = (field.value || '--').split('-'); setFieldValue(field.id, `${parts[0]}-${parts[1]}-${e.target.value}`); }}
+                            onFocus={() => setSelectedFieldId(field.id)}
+                            placeholder="일" style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.92)', border: '1px solid #8b5cf6', borderLeft: 'none', borderRadius: '0 2px 2px 0', padding: 0, fontSize: field.fontSize || Math.max(10, Math.floor(field.height * 0.33)), outline: 'none', textAlign: 'center', color: '#000000' }} />
+                          {field.showDateLabel && (field.value?.split('-')[2]) && <span style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)', fontSize: (field.fontSize || Math.max(10, Math.floor(field.height * 0.33))) * 0.8, color: '#666', pointerEvents: 'none' }}>일</span>}
+                        </div>
                       </div>
                     )}
                     {field.type === 'checkbox' && (
@@ -947,7 +961,13 @@ function App() {
                   )}
                   {selectedField.type === 'date' && (
                     <div className="space-y-3 pt-2 border-t border-slate-100">
-                      <label className="text-sm font-medium text-slate-700">날짜 칸 너비 조절 (%)</label>
+                      <div className="flex items-center justify-between">
+                         <label className="text-sm font-medium text-slate-700">날짜 칸 너비 조절 (%)</label>
+                         <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={selectedField.showDateLabel || false} onChange={e => updateField(selectedField.id, { showDateLabel: e.target.checked })} />
+                            <span className="text-xs font-bold text-indigo-600">년,월,일 포함</span>
+                         </label>
+                      </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400 w-4">년</span>

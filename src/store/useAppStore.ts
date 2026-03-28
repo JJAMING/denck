@@ -22,6 +22,7 @@ export interface FormField {
   yearWidth?: number;
   monthWidth?: number;
   dayWidth?: number;
+  showDateLabel?: boolean;
 }
 
 export type ToolType = 'select' | 'text' | 'dropdown' | 'date' | 'checkbox' | 'image';
