@@ -163,7 +163,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // 로컬 DB가 비어있으면 초기 템플릿 불러오기 (Vercel 배포 등 신규 사용자용)
     if (templates.length === 0) {
       try {
-        const response = await fetch('/lila_im_templates.json');
+        const response = await fetch('/dentist_templates.json');
         if (response.ok) {
           const initialTemplates = await response.json();
           // 가져온 템플릿들을 로컬 DB에 저장
