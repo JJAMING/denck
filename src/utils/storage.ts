@@ -12,6 +12,16 @@ export interface TemplateData {
 }
 
 const TEMPLATE_PREFIX = 'template_';
+const RECORD_PREFIX = 'record_';
+
+export interface FormRecord {
+  id: string;
+  templateId: string;
+  templateName: string;
+  fields: FormField[];
+  updatedAt: number;
+  createdAt: number;
+}
 
 export const templateStorage = {
   // 새로운 템플릿 저장 (또는 덮어쓰기)
@@ -65,3 +75,56 @@ export const templateStorage = {
     await del(`${TEMPLATE_PREFIX}${id}`);
   }
 };
+
+export const recordStorage = {
+  // 작성된 기록 저장 (또는 덮어쓰기)
+  async saveRecord(record: Omit<FormRecord, 'id' | 'createdAt' | 'updatedAt'>, existingId?: string): Promise<FormRecord> {
+    const id = existingId || uuidv4();
+    const now = Date.now();
+
+    let existingData: Partial<FormRecord> = {};
+    if (existingId) {
+      const raw = await get(`${RECORD_PREFIX}${existingId}`);
+      if (raw) existingData = raw as FormRecord;
+    }
+
+    const newRecord: FormRecord = {
+      ...existingData,
+      id,
+      templateId: record.templateId,
+      templateName: record.templateName,
+      fields: record.fields,
+      createdAt: existingData.createdAt || now,
+      updatedAt: now
+    };
+
+    await set(`${RECORD_PREFIX}${id}`, newRecord);
+    return newRecord;
+  },
+
+  // 특정 기록 불러오기
+  async getRecord(id: string): Promise<FormRecord | undefined> {
+    return await get(`${RECORD_PREFIX}${id}`);
+  },
+
+  // 전체 기록 목록
+  async getAllRecords(): Promise<FormRecord[]> {
+    const allKeys = await keys();
+    const recordKeys = allKeys.filter(key => typeof key === 'string' && key.startsWith(RECORD_PREFIX));
+
+    const records: FormRecord[] = [];
+    for (const key of recordKeys) {
+      const data = await get(key);
+      if (data) records.push(data as FormRecord);
+    }
+
+    // 최신 수정순 정렬
+    return records.sort((a, b) => b.updatedAt - a.updatedAt);
+  },
+
+  // 기록 삭제
+  async deleteRecord(id: string): Promise<void> {
+    await del(`${RECORD_PREFIX}${id}`);
+  }
+};
+

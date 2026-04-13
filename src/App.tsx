@@ -43,8 +43,11 @@ function App() {
     setFieldValue, clearAllValues,
     savedTemplates, loadSavedTemplatesList, saveCurrentTemplate,
     loadTemplate, createNewTemplate, deleteTemplate, renameTemplate, isLoading,
-    isGroupMoveEnabled, setIsGroupMoveEnabled
+    isGroupMoveEnabled, setIsGroupMoveEnabled,
+    savedRecords, loadSavedRecordsList, saveCurrentRecord, loadRecord, deleteRecord, currentRecordId
   } = useAppStore();
+
+  const [dashboardMode, setDashboardMode] = useState<'templates' | 'records'>('templates');
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [newFieldRect, setNewFieldRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -63,7 +66,10 @@ function App() {
   const mainContentRef = useRef<HTMLDivElement>(null);
   const MAX_WIDTH = 794;
 
-  useEffect(() => { loadSavedTemplatesList(); }, [loadSavedTemplatesList]);
+  useEffect(() => { 
+    loadSavedTemplatesList(); 
+    loadSavedRecordsList();
+  }, [loadSavedTemplatesList, loadSavedRecordsList]);
 
   useEffect(() => {
     if (uploadedImageSrc) {
@@ -189,6 +195,10 @@ function App() {
   const handleExportJPG = async () => {
     if (!uploadedImageSrc) return;
     setIsPdfLoading(true);
+    
+    // 이미지 추출 전에 현재 작성 내용을 기록으로 자동 저장 (수정 모드 기능)
+    await saveCurrentRecord();
+    
     try {
       const SCALE = 2;
       const canvas = document.createElement('canvas');
@@ -407,47 +417,115 @@ function App() {
               <LayoutDashboard className="w-4 h-4" /> 치과 서류 관리 시스템 v1.0
             </div>
             <h1 className="text-5xl font-black text-white mb-4 tracking-tight">
-              어떤 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">양식</span>을 작성할까요?
+              {dashboardMode === 'templates' ? (
+                <>어떤 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">양식</span>을 작성할까요?</>
+              ) : (
+                <>저장된 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">내역</span>을 수정할까요?</>
+              )}
             </h1>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              저장된 템플릿을 선택하여 즉시 작성을 시작하거나,<br />관리자 모드에서 새로운 양식을 디자인할 수 있습니다.
+              {dashboardMode === 'templates' 
+                ? '저장된 템플릿을 선택하여 즉시 작성을 시작하거나, 관리자 모드에서 새로운 양식을 디자인할 수 있습니다.'
+                : '이미 작성하여 이미지로 저장했던 내역을 불러와서 내용을 수정하거나 다시 저장할 수 있습니다.'}
             </p>
           </header>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {/* Create New Template Card */}
-            <button 
-              onClick={handleCreateNewWithUpload}
-              className="group relative flex flex-col items-center justify-center p-8 bg-white/5 border-2 border-dashed border-slate-700 hover:border-indigo-500 hover:bg-indigo-50/5 rounded-2xl transition-all duration-300"
-            >
-              <div className="w-16 h-16 bg-slate-800 group-hover:bg-indigo-600 rounded-full flex items-center justify-center mb-4 transition-colors">
-                <PlusCircle className="w-8 h-8 text-slate-400 group-hover:text-white" />
-              </div>
-              <span className="text-lg font-bold text-slate-300 group-hover:text-white">새 양식 만들기</span>
-              <p className="text-xs text-slate-500 mt-2 text-center">새로운 서류 템플릿을<br />직접 디자인합니다.</p>
-            </button>
+          <div className="flex justify-center mb-10">
+            <div className="bg-slate-800/50 p-1.5 rounded-2xl border border-slate-700 backdrop-blur-xl flex gap-1">
+              <button 
+                onClick={() => setDashboardMode('templates')}
+                className={`px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${dashboardMode === 'templates' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <FileText className="w-4 h-4" /> 양식 선택
+              </button>
+              <button 
+                onClick={() => setDashboardMode('records')}
+                className={`px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${dashboardMode === 'records' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                <Clock className="w-4 h-4" /> 작성 내역 (수정 모드)
+              </button>
+            </div>
+          </div>
 
-            {/* Saved Template Cards */}
-            {savedTemplates.map(tpl => (
-              <div key={tpl.id} className="group relative bg-slate-800/50 border border-slate-700 hover:border-cyan-500/50 rounded-2xl p-6 backdrop-blur-md transition-all duration-300 hover:translate-y-[-4px] hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-900/50 px-2 py-1 rounded-full uppercase tracking-wider">
-                    <Clock className="w-3 h-3" /> {new Date(tpl.updatedAt).toLocaleDateString()}
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{tpl.name}</h3>
-                <p className="text-sm text-slate-400 mb-6 flex-1">설정된 필드가 포함된 치과 전용 서류 양식입니다.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {dashboardMode === 'templates' ? (
+              <>
+                {/* Create New Template Card */}
                 <button 
-                  onClick={() => loadTemplate(tpl.id)}
-                  className="w-full py-3 px-4 bg-slate-700 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                  onClick={handleCreateNewWithUpload}
+                  className="group relative flex flex-col items-center justify-center p-8 bg-white/5 border-2 border-dashed border-slate-700 hover:border-indigo-500 hover:bg-indigo-50/5 rounded-2xl transition-all duration-300"
                 >
-                  작성 시작하기 <ChevronRight className="w-4 h-4" />
+                  <div className="w-16 h-16 bg-slate-800 group-hover:bg-indigo-600 rounded-full flex items-center justify-center mb-4 transition-colors">
+                    <PlusCircle className="w-8 h-8 text-slate-400 group-hover:text-white" />
+                  </div>
+                  <span className="text-lg font-bold text-slate-300 group-hover:text-white">새 양식 만들기</span>
+                  <p className="text-xs text-slate-500 mt-2 text-center">새로운 서류 템플릿을<br />직접 디자인합니다.</p>
                 </button>
-              </div>
-            ))}
+
+                {/* Saved Template Cards */}
+                {savedTemplates.map(tpl => (
+                  <div key={tpl.id} className="group relative bg-slate-800/50 border border-slate-700 hover:border-cyan-500/50 rounded-2xl p-6 backdrop-blur-md transition-all duration-300 hover:translate-y-[-4px] hover:shadow-2xl hover:shadow-cyan-500/10 flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="p-3 bg-cyan-500/10 rounded-xl text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-900/50 px-2 py-1 rounded-full uppercase tracking-wider">
+                        <Clock className="w-3 h-3" /> {new Date(tpl.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2 line-clamp-1">{tpl.name}</h3>
+                    <p className="text-sm text-slate-400 mb-6 flex-1">설정된 필드가 포함된 치과 전용 서류 양식입니다.</p>
+                    <button 
+                      onClick={() => loadTemplate(tpl.id)}
+                      className="w-full py-3 px-4 bg-slate-700 hover:bg-gradient-to-r hover:from-indigo-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                    >
+                      작성 시작하기 <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                {savedRecords.length === 0 ? (
+                  <div className="col-span-full py-20 text-center">
+                    <Clock className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                    <p className="text-slate-500 text-lg">아직 저장된 작성 내역이 없습니다.</p>
+                    <p className="text-slate-600 text-sm mt-2">양식을 작성하고 '이미지로 저장'하면 여기에 기록이 남습니다.</p>
+                  </div>
+                ) : (
+                  savedRecords.map(record => (
+                    <div key={record.id} className="group relative bg-slate-800/50 border border-slate-700 hover:border-emerald-500/50 rounded-2xl p-6 backdrop-blur-md transition-all duration-300 hover:translate-y-[-4px] hover:shadow-2xl hover:shadow-emerald-500/10 flex flex-col">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                          <Pencil className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); deleteRecord(record.id); }}
+                            className="p-1.5 text-slate-500 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-1 line-clamp-1">{record.templateName}</h3>
+                      <p className="text-xs text-slate-400 mb-4 font-mono">
+                        최근 수정: {new Date(record.updatedAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500 mb-6 flex-1 italic">
+                        {record.fields.filter(f => f.value).length}개의 항목이 작성되었습니다.
+                      </p>
+                      <button 
+                        onClick={() => loadRecord(record.id)}
+                        className="w-full py-3 px-4 bg-slate-700 hover:bg-gradient-to-r hover:from-emerald-600 hover:to-cyan-600 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                      >
+                        이어서 수정하기 <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </>
+            )}
           </div>
 
           <footer className="mt-20 pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -540,8 +618,13 @@ function App() {
             </button>
             <div className="w-px h-6 bg-slate-200 mx-1" />
             <input type="text" value={currentTemplateName} onChange={e => setCurrentTemplateName(e.target.value)}
-              className="text-lg font-bold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 py-0.5 transition-colors min-w-[500px] max-w-[600px]"
+              className={`text-lg font-bold bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 py-0.5 transition-colors min-w-[500px] max-w-[600px] ${currentRecordId ? 'text-emerald-700' : 'text-slate-800'}`}
               placeholder="템플릿 이름 입력..." disabled={appMode === 'fill'} />
+            {currentRecordId && (
+              <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 animate-pulse">
+                수정 모드 (기록 편집 중)
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -596,6 +679,12 @@ function App() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors">
                   <RotateCcw className="w-4 h-4" /> 초기화
                 </button>
+                {currentRecordId && (
+                  <button onClick={() => saveCurrentRecord().then(() => alert('작성된 내용이 저장되었습니다.'))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors border border-emerald-200">
+                    <Save className="w-4 h-4" /> 중간 저장
+                  </button>
+                )}
                 <button onClick={handleExportJPG} disabled={isPdfLoading}
                   className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white rounded-md shadow-sm transition-colors ${isPdfLoading ? 'bg-emerald-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
                   <Download className="w-4 h-4" /> {isPdfLoading ? '이미지 생성 중...' : '이미지로 저장'}

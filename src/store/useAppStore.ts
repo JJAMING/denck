@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { templateStorage } from '../utils/storage';
-import type { TemplateData } from '../utils/storage';
+import { templateStorage, recordStorage } from '../utils/storage';
+import type { TemplateData, FormRecord } from '../utils/storage';
 
 export type FieldType = 'text' | 'dropdown' | 'date-year' | 'date-month' | 'date-day' | 'date' | 'checkbox' | 'image';
 
@@ -35,6 +35,7 @@ interface AppState {
 
   // Current working template info
   currentTemplateId: string | null;
+  currentRecordId: string | null;
   currentTemplateName: string;
   setCurrentTemplateName: (name: string) => void;
   isLoading: boolean;
@@ -72,6 +73,13 @@ interface AppState {
   exportTemplates: () => Promise<void>;
   isGroupMoveEnabled: boolean;
   setIsGroupMoveEnabled: (enabled: boolean) => void;
+
+  // Record (Form Submission) Actions
+  savedRecords: FormRecord[];
+  loadSavedRecordsList: () => Promise<void>;
+  saveCurrentRecord: () => Promise<void>;
+  loadRecord: (id: string) => Promise<void>;
+  deleteRecord: (id: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -119,6 +127,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   currentTemplateId: null,
+  currentRecordId: null,
   currentTemplateName: '새 양식',
   setCurrentTemplateName: (name) => set({ currentTemplateName: name }),
   isLoading: false,
@@ -211,6 +220,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (template) {
         set({
           currentTemplateId: template.id,
+          currentRecordId: null, // New filling from template
           currentTemplateName: template.name,
           uploadedImageSrc: template.imageSrc,
           fields: (template.fields || []).map(f => ({
@@ -236,6 +246,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({
       currentTemplateId: null,
+      currentRecordId: null,
       currentTemplateName: '새 양식',
       uploadedImageSrc: null,
       fields: [],
@@ -306,4 +317,64 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   isGroupMoveEnabled: true,
   setIsGroupMoveEnabled: (enabled: boolean) => set({ isGroupMoveEnabled: enabled }),
+
+  savedRecords: [],
+  loadSavedRecordsList: async () => {
+    const records = await recordStorage.getAllRecords();
+    set({ savedRecords: records });
+  },
+
+  saveCurrentRecord: async () => {
+    const { currentTemplateId, currentRecordId, currentTemplateName, fields } = get();
+    if (!currentTemplateId) return;
+
+    try {
+      const saved = await recordStorage.saveRecord({
+        templateId: currentTemplateId,
+        templateName: currentTemplateName,
+        fields: fields
+      }, currentRecordId || undefined);
+      
+      set({ currentRecordId: saved.id });
+      await get().loadSavedRecordsList();
+    } catch (e) {
+      console.error('기록 저장 실패:', e);
+    }
+  },
+
+  loadRecord: async (id: string) => {
+    set({ isLoading: true });
+    try {
+      const record = await recordStorage.getRecord(id);
+      if (record) {
+        // 이미지 경로를 가져오기 위해 템플릿 정보도 필요함
+        const template = await templateStorage.getTemplate(record.templateId);
+        set({
+          currentTemplateId: record.templateId,
+          currentRecordId: record.id,
+          currentTemplateName: record.templateName,
+          uploadedImageSrc: template ? template.imageSrc : null,
+          fields: record.fields,
+          selectedFieldId: null,
+          selectedTool: 'select',
+          appMode: 'fill'
+        });
+      }
+    } catch (e) {
+      console.error('기록 불러오기 실패:', e);
+      alert('기록을 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  deleteRecord: async (id: string) => {
+    if (!window.confirm('이 기록을 정말 삭제하시겠습니까?')) return;
+    await recordStorage.deleteRecord(id);
+    await get().loadSavedRecordsList();
+    
+    if (get().currentRecordId === id) {
+      set({ currentRecordId: null });
+    }
+  },
 }));
