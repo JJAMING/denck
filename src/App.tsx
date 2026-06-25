@@ -404,6 +404,26 @@ function App() {
     }, 100);
   };
 
+  const handleReplaceTemplateImage = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg';
+    input.onchange = (e) => {
+      const t = e.target as HTMLInputElement;
+      if (!t.files?.[0]) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setUploadedImageSrc(reader.result);
+          setSelectedFieldId(null);
+        }
+      };
+      reader.readAsDataURL(t.files[0]);
+    };
+    input.click();
+  };
+
   if (!currentTemplateId && !isLoading && appMode === 'fill') {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -692,10 +712,22 @@ function App() {
               </>
             )}
             {appMode === 'edit' && (
-              <button onClick={saveCurrentTemplate} disabled={isLoading || !uploadedImageSrc}
-                className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white rounded-md shadow-sm transition-colors ring-1 ring-inset ${isLoading || !uploadedImageSrc ? 'bg-indigo-400 ring-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 ring-indigo-700'}`}>
-                <Save className="w-4 h-4" /> {isLoading ? '저장 중...' : '템플릿 저장'}
-              </button>
+              <>
+                <button onClick={handleReplaceTemplateImage} disabled={isLoading}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border shadow-sm transition-colors ${isLoading ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50'}`}
+                  title="캔버스 편집 내용은 유지하고 템플릿 이미지만 교체합니다.">
+                  <Upload className="w-4 h-4" /> 템플릿 이미지 교체
+                </button>
+                <button onClick={saveCurrentTemplate} disabled={isLoading || !uploadedImageSrc}
+                  className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white rounded-md shadow-sm transition-colors ring-1 ring-inset ${isLoading || !uploadedImageSrc ? 'bg-indigo-400 ring-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 ring-indigo-700'}`}>
+                  <Save className="w-4 h-4" /> {isLoading ? '저장 중...' : '템플릿 저장'}
+                </button>
+                <button onClick={() => currentTemplateId && deleteTemplate(currentTemplateId)} disabled={isLoading || !currentTemplateId}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md border shadow-sm transition-colors ${isLoading || !currentTemplateId ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-red-600 border-red-200 hover:bg-red-50'}`}
+                  title="현재 열려 있는 템플릿을 삭제합니다.">
+                  <Trash2 className="w-4 h-4" /> 템플릿 삭제
+                </button>
+              </>
             )}
           </div>
         </header>
